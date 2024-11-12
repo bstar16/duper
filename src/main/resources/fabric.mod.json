@@ -3,8 +3,8 @@
   "id": "autoduper",
   "version": "${version}",
   "name": "Auto Duper",
-  "description": "Automated duping mod",
-  "authors": ["Your Name"],
+  "description": "Automates duping",
+  "authors": ["bstar16"],
   "contact": {},
   "license": "MIT",
   "environment": "client",
@@ -13,10 +13,13 @@
       "org.bstar.autoduper.AutoDuperMod"
     ]
   },
-  "mixins": [],
+  "mixins": [
+    "autoduper.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.14.21",
-    "fabric": "*",
-    "minecraft": "1.20.4"
+    "minecraft": "~1.20.4",
+    "java": ">=17",
+    "fabric-api": "*"
   }
 }

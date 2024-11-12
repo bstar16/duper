@@ -1,111 +1,134 @@
 package org.bstar.autoduper.client;
 
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.passive.DonkeyEntity;
 import net.minecraft.item.Items;
+import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.Box;
-import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
 import java.util.List;
 
 public class DupeSequencer {
     private final MinecraftClient client = MinecraftClient.getInstance();
     private int ticks = 0;
     private int stage = 0;
-    private int mountDelay = 20;
+    private Entity targetDonkey = null;
+    private int mountDelay = 20; // Default mount delay
+
+    public void setMountDelay(int delay) {
+        this.mountDelay = delay;
+    }
 
     public void tick() {
-        if (client.player == null) return;
+        if (client.player == null || client.world == null) return;
 
         ticks++;
+
         switch (stage) {
-            case 0: // Select chest in hotbar
-                for (int i = 0; i < 9; i++) {
-                    if (client.player.getInventory().getStack(i).getItem() == Items.CHEST) {
-                        client.player.getInventory().selectedSlot = i;
-                        break;
-                    }
-                }
-                ticks = 0;
+            case 0: // Find and select chest
+                selectChestInHotbar();
                 stage++;
+                ticks = 0;
                 break;
 
-            case 1: // Mount donkey
-                Entity nearestDonkey = findNearestDonkey();
-                if (nearestDonkey != null) {
-                    client.player.startRiding(nearestDonkey);
-                }
-                ticks = 0;
-                stage++;
-                break;
-
-            case 2: // Wait for mount and open inventory
-                if (ticks >= 5) {
-                    Entity vehicle = client.player.getVehicle();
-                    if (vehicle != null) {
-                        // Send packet to open inventory
-                        client.player.networkHandler.sendPacket(
-                                PlayerInteractEntityC2SPacket.interact(vehicle, false, Hand.MAIN_HAND)
-                        );
-                    }
-                    ticks = 0;
+            case 1: // Find donkey
+                targetDonkey = findNearestDonkey();
+                if (targetDonkey != null) {
                     stage++;
                 }
+                ticks = 0;
                 break;
 
-            case 3: // Put items into donkey (skip chests)
-                if (client.currentScreen != null && ticks >= 2) {
-                    moveItemsToDonkey();
-                    ticks = 0;
-                    stage++;
+            case 2: // Mount donkey
+                if (ticks >= mountDelay) {
+                    if (targetDonkey != null) {
+                        client.player.startRiding(targetDonkey);
+                        stage++;
+                        ticks = 0;
+                    }
                 }
                 break;
 
-            case 4: // Click donkey with chest
-                if (client.player.getVehicle() != null) {
+            case 3: // Open inventory
+                if (ticks >= 5 && client.player.getVehicle() != null) {
+                    // Send packet to open inventory
                     client.player.networkHandler.sendPacket(
                             PlayerInteractEntityC2SPacket.interact(
                                     client.player.getVehicle(),
-                                    true,
+                                    false,
                                     Hand.MAIN_HAND
                             )
                     );
+                    stage++;
+                    ticks = 0;
                 }
-                ticks = 0;
-                stage++;
                 break;
 
-            case 5: // Take items out
+            case 4: // Move items to donkey
+                if (client.currentScreen != null && ticks >= 2) {
+                    moveItemsToDonkey();
+                    stage++;
+                    ticks = 0;
+                }
+                break;
+
+            case 5: // Apply chest
+                if (ticks >= 2 && client.player.getVehicle() != null) {
+                    client.player.networkHandler.sendPacket(
+                            PlayerInteractEntityC2SPacket.interactAt(
+                                    client.player.getVehicle(),
+                                    false,
+                                    Hand.MAIN_HAND,
+                                    client.player.getPos()
+                            )
+                    );
+                    stage++;
+                    ticks = 0;
+                }
+                break;
+
+            case 6: // Take items out
                 if (client.currentScreen != null && ticks >= 2) {
                     moveItemsFromDonkey();
-                    ticks = 0;
                     stage++;
+                    ticks = 0;
                 }
                 break;
 
-            case 6: // Close inventory
-                if (client.currentScreen != null) {
-                    client.player.closeHandledScreen();
+            case 7: // Close inventory
+                if (ticks >= 2) {
+                    if (client.currentScreen != null) {
+                        client.player.closeHandledScreen();
+                    }
+                    stage++;
+                    ticks = 0;
                 }
-                ticks = 0;
-                stage++;
                 break;
 
-            case 7: // Dismount
+            case 8: // Dismount
                 if (ticks >= 2) {
                     client.player.dismountVehicle();
+                    stage = 0;
                     ticks = 0;
-                    stage = 0; // Reset to beginning
+                    targetDonkey = null;
                 }
                 break;
         }
     }
 
-    private Entity findNearestDonkey() {
-        if (client.world == null || client.player == null) return null;
+    private void selectChestInHotbar() {
+        for (int i = 0; i < 9; i++) {
+            if (client.player.getInventory().getStack(i).getItem() == Items.CHEST) {
+                client.player.getInventory().selectedSlot = i;
+                break;
+            }
+        }
+    }
 
+    private Entity findNearestDonkey() {
         Box searchBox = new Box(
                 client.player.getX() - 5,
                 client.player.getY() - 5,
@@ -115,13 +138,13 @@ public class DupeSequencer {
                 client.player.getZ() + 5
         );
 
-        List<Entity> entities = client.world.getEntitiesByClass(Entity.class, searchBox,
-                entity -> entity.getName().getString().contains("Donkey"));
+        List<DonkeyEntity> entities = client.world.getEntitiesByType(
+                EntityType.DONKEY,
+                searchBox,
+                donkey -> !donkey.hasChest() && !donkey.hasPassengers()
+        );
 
-        if (!entities.isEmpty()) {
-            return entities.get(0);
-        }
-        return null;
+        return entities.isEmpty() ? null : entities.get(0);
     }
 
     private void moveItemsToDonkey() {
@@ -161,15 +184,13 @@ public class DupeSequencer {
         }
     }
 
-    public void setMountDelay(int delay) {
-        this.mountDelay = delay;
+    public int getCurrentStage() {
+        return stage;
     }
 
     public void reset() {
         ticks = 0;
         stage = 0;
-    }
-    public int getCurrentStage() {
-        return stage;
+        targetDonkey = null;
     }
 }

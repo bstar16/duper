@@ -4,7 +4,7 @@ public class AutoDuperClient {
     private static AutoDuperClient INSTANCE;
     private boolean isDuping = false;
     private final DupeSequencer sequencer = new DupeSequencer();
-    private int mountDelay = 20;
+    private int mountDelay = 20; // Default mount delay
 
     public static AutoDuperClient getInstance() {
         if (INSTANCE == null) {
@@ -37,6 +37,7 @@ public class AutoDuperClient {
         return sequencer.getCurrentStage();
     }
 
+    // Add these methods for mount delay functionality
     public void setMountDelay(int delay) {
         this.mountDelay = delay;
         sequencer.setMountDelay(delay);
