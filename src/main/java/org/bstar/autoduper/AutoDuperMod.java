@@ -10,10 +10,10 @@ import org.lwjgl.glfw.GLFW;
 
 public class AutoDuperMod implements ClientModInitializer {
     private static KeyBinding toggleKey;
+    private static boolean wasPressed = false;
 
     @Override
     public void onInitializeClient() {
-        // Register keybinding
         toggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.autoduper.toggle",
                 InputUtil.Type.KEYSYM,
@@ -21,15 +21,20 @@ public class AutoDuperMod implements ClientModInitializer {
                 "category.autoduper.main"
         ));
 
-        // Register tick event
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (toggleKey.wasPressed()) {
+            if (toggleKey.isPressed() && !wasPressed) {
                 AutoDuperClient instance = AutoDuperClient.getInstance();
                 if (instance.isDuping()) {
                     instance.stopDupe();
                 } else {
                     instance.startDupe();
                 }
+            }
+            wasPressed = toggleKey.isPressed();
+
+            // Tick the client
+            if (AutoDuperClient.getInstance().isDuping()) {
+                AutoDuperClient.getInstance().onTick();
             }
         });
     }

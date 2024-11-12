@@ -1,10 +1,16 @@
 package org.bstar.autoduper.client;
 
+import net.minecraft.client.MinecraftClient;
+
 public class AutoDuperClient {
     private static AutoDuperClient INSTANCE;
     private boolean isDuping = false;
-    private final DupeSequencer sequencer = new DupeSequencer();
-    private int mountDelay = 20; // Default mount delay
+    private final DupeSequencer sequencer;
+    private int mountDelay = 20;
+
+    private AutoDuperClient() {
+        this.sequencer = new DupeSequencer();
+    }
 
     public static AutoDuperClient getInstance() {
         if (INSTANCE == null) {
@@ -15,12 +21,12 @@ public class AutoDuperClient {
 
     public void startDupe() {
         isDuping = true;
-        sequencer.reset();
+        sequencer.toggle();
     }
 
     public void stopDupe() {
         isDuping = false;
-        sequencer.reset();
+        sequencer.toggle();
     }
 
     public void onTick() {
@@ -37,7 +43,6 @@ public class AutoDuperClient {
         return sequencer.getCurrentStage();
     }
 
-    // Add these methods for mount delay functionality
     public void setMountDelay(int delay) {
         this.mountDelay = delay;
         sequencer.setMountDelay(delay);
