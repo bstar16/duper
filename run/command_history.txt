@@ -26,3 +26,6 @@
 /autoduper start
 /summon minecraft:horse
 /autoduper start
+/donkeydupe
+/donkeydupe delay -1
+/donkeydupe delay 0

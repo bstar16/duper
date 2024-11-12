@@ -1,40 +1,33 @@
 package org.bstar.autoduper;
 
-import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
 import org.bstar.autoduper.client.AutoDuperClient;
-import org.lwjgl.glfw.GLFW;
+import org.bstar.autoduper.commands.DupeCommands;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class AutoDuperMod implements ClientModInitializer {
-    private static KeyBinding toggleKey;
-    private static boolean wasPressed = false;
+public class AutoDuperMod implements ModInitializer {
+    public static final String MOD_ID = "autoduper";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     @Override
-    public void onInitializeClient() {
-        toggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.autoduper.toggle",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_R,
-                "category.autoduper.main"
-        ));
+    public void onInitialize() {
+        LOGGER.info("Initializing AutoDuper");
 
+        // Register commands
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+            DupeCommands.register(dispatcher);
+        });
+
+        // Register tick event
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (toggleKey.isPressed() && !wasPressed) {
+            if (client.player != null) {
                 AutoDuperClient instance = AutoDuperClient.getInstance();
                 if (instance.isDuping()) {
-                    instance.stopDupe();
-                } else {
-                    instance.startDupe();
+                    instance.onTick();
                 }
-            }
-            wasPressed = toggleKey.isPressed();
-
-            // Tick the client
-            if (AutoDuperClient.getInstance().isDuping()) {
-                AutoDuperClient.getInstance().onTick();
             }
         });
     }
