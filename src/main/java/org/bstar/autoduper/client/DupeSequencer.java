@@ -7,11 +7,9 @@ import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.text.Text;
+import net.minecraft.util.Hand;
 import net.minecraft.client.gui.screen.ingame.HorseScreen;
 import net.minecraft.screen.HorseScreenHandler;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.Box;
-import java.util.List;
 
 public class DupeSequencer {
     private boolean isRunning = false;
@@ -19,7 +17,6 @@ public class DupeSequencer {
     private int tickDelay = 0;
     private final MinecraftClient client = MinecraftClient.getInstance();
     private int mountDelay = 20;
-    private DonkeyEntity targetDonkey;
 
     public void reset() {
         isRunning = false;
@@ -27,114 +24,26 @@ public class DupeSequencer {
         tickDelay = 0;
     }
 
-    public void setMountDelay(int delay) {
-        this.mountDelay = delay;
-    }
-
     public int getCurrentStage() {
         return currentStage;
     }
 
-    private void sendDebugMessage(String message) {
-        if (client.player != null) {
-            client.player.sendMessage(Text.literal("§b[AutoDuper] " + message), false);
-        }
-    }
-
-    private int findChestInHotbar() {
-        if (client.player == null) return -1;
-        for (int i = 0; i < 9; i++) {
-            if (client.player.getInventory().getStack(i).getItem() == Items.CHEST) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    private DonkeyEntity findNearestDonkey() {
-        if (client.world == null || client.player == null) return null;
-
-        double searchRadius = 5.0;
-        DonkeyEntity closest = null;
-        double closestDistance = searchRadius * searchRadius;
-
-        for (Entity entity : client.world.getEntities()) {
-            if (entity instanceof DonkeyEntity donkey) {
-                double distance = client.player.squaredDistanceTo(entity);
-                if (distance < closestDistance && !donkey.hasPassengers()) {
-                    closestDistance = distance;
-                    closest = donkey;
-                }
-            }
-        }
-
-        if (closest != null) {
-            double deltaX = closest.getX() - client.player.getX();
-            double deltaY = (closest.getY() + closest.getHeight()/2) - (client.player.getY() + client.player.getEyeHeight(client.player.getPose()));
-            double deltaZ = closest.getZ() - client.player.getZ();
-
-            double horizontalDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
-            float yaw = (float) Math.toDegrees(Math.atan2(-deltaX, deltaZ));
-            float pitch = (float) Math.toDegrees(-Math.atan2(deltaY, horizontalDistance));
-
-            client.player.setYaw(yaw);
-            client.player.setPitch(pitch);
-        }
-
-        return closest;
-    }
-
-    private void moveItemsToDonkey() {
-        if (!(client.currentScreen instanceof HorseScreen)) return;
-
-        HorseScreenHandler handler = ((HorseScreen) client.currentScreen).getScreenHandler();
-
-        for (int i = 2; i < 17; i++) {
-            if (handler.getSlot(i).getStack().isEmpty()) {
-                for (int j = 32; j < handler.slots.size(); j++) {
-                    if (!handler.getSlot(j).getStack().isEmpty() &&
-                            handler.getSlot(j).getStack().getItem() != Items.CHEST) {
-                        client.interactionManager.clickSlot(handler.syncId, j, 0, SlotActionType.PICKUP, client.player);
-                        client.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, client.player);
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    private void moveItemsFromDonkey() {
-        if (!(client.currentScreen instanceof HorseScreen)) return;
-
-        HorseScreenHandler handler = ((HorseScreen) client.currentScreen).getScreenHandler();
-
-        for (int i = 2; i < 17; i++) {
-            if (!handler.getSlot(i).getStack().isEmpty()) {
-                for (int j = 32; j < handler.slots.size(); j++) {
-                    if (handler.getSlot(j).getStack().isEmpty()) {
-                        client.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, client.player);
-                        client.interactionManager.clickSlot(handler.syncId, j, 0, SlotActionType.PICKUP, client.player);
-                        break;
-                    }
-                }
-            }
-        }
+    public void setMountDelay(int delay) {
+        this.mountDelay = delay;
     }
 
     public void toggle() {
         isRunning = !isRunning;
         currentStage = 0;
         tickDelay = 0;
-        if (client.player != null) {
-            sendDebugMessage("Dupe " + (isRunning ? "Started" : "Stopped") + " (Stage: " + currentStage + ")");
-        }
+        sendDebugMessage("Dupe " + (isRunning ? "Started" : "Stopped") + " (Stage: " + currentStage + ")");
     }
 
     public void tick() {
-        if (!isRunning || client.player == null || --tickDelay > 0) return;
+        if (!isRunning || --tickDelay > 0) return;
 
         switch (currentStage) {
-            case 0:
+            case 0: // Select chest in hotbar
                 int chestSlot = findChestInHotbar();
                 if (chestSlot != -1) {
                     sendDebugMessage("Selecting chest in hotbar");
@@ -147,7 +56,7 @@ public class DupeSequencer {
                 }
                 break;
 
-            case 1:
+            case 1: // Mount donkey
                 if (!(client.player.getVehicle() instanceof DonkeyEntity)) {
                     DonkeyEntity nearestDonkey = findNearestDonkey();
                     if (nearestDonkey != null) {
@@ -166,18 +75,18 @@ public class DupeSequencer {
 
             case 2: // Check if mounted
                 if (client.player.getVehicle() instanceof DonkeyEntity) {
-                    tickDelay = 20; // Adjust this delay if needed
+                    tickDelay = mountDelay;
                     currentStage = 3;
                 } else {
                     currentStage = 1;
                 }
                 break;
 
-            case 3: // Open inventory using packet
+            case 3: // Open inventory
                 if (client.player.getVehicle() instanceof DonkeyEntity) {
                     sendDebugMessage("Opening inventory");
                     client.player.networkHandler.sendPacket(
-                            new ClientCommandC2SPacket(client.player, ClientCommandC2SPacket.Mode.OPEN_INVENTORY)
+                        new ClientCommandC2SPacket(client.player, ClientCommandC2SPacket.Mode.OPEN_INVENTORY)
                     );
                     tickDelay = 5;
                     currentStage = 4;
@@ -246,11 +155,95 @@ public class DupeSequencer {
             case 10: // Release dismount key
                 client.options.sneakKey.setPressed(false);
                 tickDelay = 2;
-                currentStage = 0;
+                if (client.player.getVehicle() == null) {
+                    currentStage = 0;
+                } else {
+                    currentStage = 9;
+                }
                 break;
         }
     }
 
-    // Your original helper methods here (findNearestDonkey, moveItemsToDonkey, etc.)
-    // ... rest of the code remains the same ...
+    private void sendDebugMessage(String message) {
+        if (client.player != null) {
+            client.player.sendMessage(Text.literal("§b[AutoDuper] " + message), false);
+        }
+    }
+
+    private int findChestInHotbar() {
+        for (int i = 0; i < 9; i++) {
+            if (client.player.getInventory().getStack(i).getItem() == Items.CHEST) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private DonkeyEntity findNearestDonkey() {
+        double searchRadius = 5.0;
+        DonkeyEntity closest = null;
+        double closestDistance = searchRadius * searchRadius;
+
+        for (Entity entity : client.world.getEntities()) {
+            if (entity instanceof DonkeyEntity donkey) {
+                double distance = client.player.squaredDistanceTo(entity);
+                if (distance < closestDistance && !donkey.hasPassengers()) {
+                    closestDistance = distance;
+                    closest = donkey;
+                }
+            }
+        }
+
+        if (closest != null) {
+            double deltaX = closest.getX() - client.player.getX();
+            double deltaY = (closest.getY() + closest.getHeight()/2) - (client.player.getY() + client.player.getEyeHeight(client.player.getPose()));
+            double deltaZ = closest.getZ() - client.player.getZ();
+            
+            double horizontalDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
+            float yaw = (float) Math.toDegrees(Math.atan2(-deltaX, deltaZ));
+            float pitch = (float) Math.toDegrees(-Math.atan2(deltaY, horizontalDistance));
+            
+            client.player.setYaw(yaw);
+            client.player.setPitch(pitch);
+        }
+        
+        return closest;
+    }
+
+    private void moveItemsToDonkey() {
+        if (!(client.currentScreen instanceof HorseScreen)) return;
+        
+        HorseScreenHandler handler = ((HorseScreen) client.currentScreen).getScreenHandler();
+        
+        for (int i = 2; i < 17; i++) {
+            if (handler.getSlot(i).getStack().isEmpty()) {
+                for (int j = 32; j < handler.slots.size(); j++) {
+                    if (!handler.getSlot(j).getStack().isEmpty() && 
+                        handler.getSlot(j).getStack().getItem() != Items.CHEST) {
+                        client.interactionManager.clickSlot(handler.syncId, j, 0, SlotActionType.PICKUP, client.player);
+                        client.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, client.player);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private void moveItemsFromDonkey() {
+        if (!(client.currentScreen instanceof HorseScreen)) return;
+        
+        HorseScreenHandler handler = ((HorseScreen) client.currentScreen).getScreenHandler();
+        
+        for (int i = 2; i < 17; i++) {
+            if (!handler.getSlot(i).getStack().isEmpty()) {
+                for (int j = 32; j < handler.slots.size(); j++) {
+                    if (handler.getSlot(j).getStack().isEmpty()) {
+                        client.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, client.player);
+                        client.interactionManager.clickSlot(handler.syncId, j, 0, SlotActionType.PICKUP, client.player);
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
