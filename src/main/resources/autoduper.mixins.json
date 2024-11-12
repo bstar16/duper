@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "org.bstar.autoduper.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "HorseScreenMixin",
+    "InGameHudMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

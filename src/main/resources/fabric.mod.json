@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "autoduper",
+  "version": "${version}",
+  "name": "Auto Duper",
+  "description": "Automated duping mod",
+  "authors": ["Your Name"],
+  "contact": {},
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "org.bstar.autoduper.AutoDuperMod"
+    ]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.14.21",
+    "fabric": "*",
+    "minecraft": "1.20.4"
+  }
+}
