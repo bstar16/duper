@@ -29,3 +29,8 @@
 /donkeydupe
 /donkeydupe delay -1
 /donkeydupe delay 0
+/dupe delay
+/dupe delay chest 10
+/donkeydupe
+/donkeydupe delay 15
+/dupe delay chest 600
