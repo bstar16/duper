@@ -1,0 +1,28 @@
+/gamemode creative
+/gamemode spectator
+/difficulty peaceful
+/gamemode creative
+/give bstar__ minecraft:saddle
+/gamemode survival
+/time set day
+/weather clear
+/gamerule doDaylightCycle false
+/gamerule doWeatherCycle false
+/gamerule doMobSpawning false
+/clear
+/give bstar__ minecraft:chest 64
+/give bstar__ minecraft:totem_of_undying
+/dupe debug
+/dupe delays
+/dupe delays show
+/dupe delays set chest
+/dupe delays show
+/dupe delays set mount 5
+/dupe delays set inventory 10
+/dupe delays show
+/summon minecraft:horse
+/kill @e[type=minecraft:item]
+/autoduper config
+/autoduper start
+/summon minecraft:horse
+/autoduper start
