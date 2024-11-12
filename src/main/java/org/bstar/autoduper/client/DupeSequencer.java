@@ -16,63 +16,7 @@ public class DupeSequencer {
     private int currentStage = 0;
     private int tickDelay = 0;
     private final MinecraftClient client = MinecraftClient.getInstance();
-
-    // Delay fields
     private int mountDelay = 20;
-    private int keyPressDelay = 2;
-    private int inventoryDelay = 5;
-    private int moveItemsDelay = 2;
-    private int chestApplyDelay = 2;
-    private int dismountDelay = 2;
-
-    // Getters and setters for delays
-    public void setMountDelay(int delay) {
-        this.mountDelay = delay;
-    }
-
-    public void setKeyPressDelay(int delay) {
-        this.keyPressDelay = delay;
-    }
-
-    public void setInventoryDelay(int delay) {
-        this.inventoryDelay = delay;
-    }
-
-    public void setMoveItemsDelay(int delay) {
-        this.moveItemsDelay = delay;
-    }
-
-    public void setChestApplyDelay(int delay) {
-        this.chestApplyDelay = delay;
-    }
-
-    public void setDismountDelay(int delay) {
-        this.dismountDelay = delay;
-    }
-
-    public int getMountDelay() {
-        return mountDelay;
-    }
-
-    public int getKeyPressDelay() {
-        return keyPressDelay;
-    }
-
-    public int getInventoryDelay() {
-        return inventoryDelay;
-    }
-
-    public int getMoveItemsDelay() {
-        return moveItemsDelay;
-    }
-
-    public int getChestApplyDelay() {
-        return chestApplyDelay;
-    }
-
-    public int getDismountDelay() {
-        return dismountDelay;
-    }
 
     public void reset() {
         isRunning = false;
@@ -82,6 +26,10 @@ public class DupeSequencer {
 
     public int getCurrentStage() {
         return currentStage;
+    }
+
+    public void setMountDelay(int delay) {
+        this.mountDelay = delay;
     }
 
     public void toggle() {
@@ -100,7 +48,7 @@ public class DupeSequencer {
                 if (chestSlot != -1) {
                     sendDebugMessage("Selecting chest in hotbar");
                     client.player.getInventory().selectedSlot = chestSlot;
-                    tickDelay = keyPressDelay;
+                    tickDelay = 2;
                     currentStage = 1;
                 } else {
                     sendDebugMessage("No chest found in hotbar! Stopping.");
@@ -114,7 +62,7 @@ public class DupeSequencer {
                     if (nearestDonkey != null) {
                         sendDebugMessage("Mounting donkey");
                         client.interactionManager.interactEntity(client.player, nearestDonkey, Hand.MAIN_HAND);
-                        tickDelay = keyPressDelay;
+                        tickDelay = 2;
                         currentStage = 2;
                     } else {
                         sendDebugMessage("No donkey found nearby! Stopping.");
@@ -138,9 +86,9 @@ public class DupeSequencer {
                 if (client.player.getVehicle() instanceof DonkeyEntity) {
                     sendDebugMessage("Opening inventory");
                     client.player.networkHandler.sendPacket(
-                            new ClientCommandC2SPacket(client.player, ClientCommandC2SPacket.Mode.OPEN_INVENTORY)
+                        new ClientCommandC2SPacket(client.player, ClientCommandC2SPacket.Mode.OPEN_INVENTORY)
                     );
-                    tickDelay = inventoryDelay;
+                    tickDelay = 5;
                     currentStage = 4;
                 } else {
                     currentStage = 1;
@@ -149,7 +97,7 @@ public class DupeSequencer {
 
             case 4: // Verify inventory opened
                 if (client.currentScreen instanceof HorseScreen) {
-                    tickDelay = keyPressDelay;
+                    tickDelay = 2;
                     currentStage = 5;
                 } else {
                     currentStage = 3;
@@ -160,7 +108,7 @@ public class DupeSequencer {
                 if (client.currentScreen instanceof HorseScreen) {
                     sendDebugMessage("Moving items to donkey");
                     moveItemsToDonkey();
-                    tickDelay = moveItemsDelay;
+                    tickDelay = 2;
                     currentStage = 6;
                 }
                 break;
@@ -170,7 +118,7 @@ public class DupeSequencer {
                     sendDebugMessage("Applying chest");
                     DonkeyEntity donkey = (DonkeyEntity) client.player.getVehicle();
                     client.interactionManager.interactEntity(client.player, donkey, Hand.MAIN_HAND);
-                    tickDelay = chestApplyDelay;
+                    tickDelay = 2;
                     currentStage = 7;
                 }
                 break;
@@ -179,7 +127,7 @@ public class DupeSequencer {
                 if (client.currentScreen instanceof HorseScreen) {
                     sendDebugMessage("Taking items from donkey");
                     moveItemsFromDonkey();
-                    tickDelay = moveItemsDelay;
+                    tickDelay = 2;
                     currentStage = 8;
                 }
                 break;
@@ -188,7 +136,7 @@ public class DupeSequencer {
                 if (client.currentScreen != null) {
                     sendDebugMessage("Closing inventory");
                     client.player.closeHandledScreen();
-                    tickDelay = keyPressDelay;
+                    tickDelay = 2;
                     currentStage = 9;
                 }
                 break;
@@ -197,7 +145,7 @@ public class DupeSequencer {
                 if (client.player.getVehicle() instanceof DonkeyEntity) {
                     sendDebugMessage("Dismounting donkey");
                     client.options.sneakKey.setPressed(true);
-                    tickDelay = keyPressDelay;
+                    tickDelay = 2;
                     currentStage = 10;
                 } else {
                     currentStage = 0;
@@ -206,7 +154,7 @@ public class DupeSequencer {
 
             case 10: // Release dismount key
                 client.options.sneakKey.setPressed(false);
-                tickDelay = dismountDelay;
+                tickDelay = 2;
                 if (client.player.getVehicle() == null) {
                     currentStage = 0;
                 } else {
@@ -248,30 +196,30 @@ public class DupeSequencer {
 
         if (closest != null) {
             double deltaX = closest.getX() - client.player.getX();
-            double deltaY = (closest.getY() + closest.getHeight() / 2) - (client.player.getY() + client.player.getEyeHeight(client.player.getPose()));
+            double deltaY = (closest.getY() + closest.getHeight()/2) - (client.player.getY() + client.player.getEyeHeight(client.player.getPose()));
             double deltaZ = closest.getZ() - client.player.getZ();
-
+            
             double horizontalDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
             float yaw = (float) Math.toDegrees(Math.atan2(-deltaX, deltaZ));
             float pitch = (float) Math.toDegrees(-Math.atan2(deltaY, horizontalDistance));
-
+            
             client.player.setYaw(yaw);
             client.player.setPitch(pitch);
         }
-
+        
         return closest;
     }
 
     private void moveItemsToDonkey() {
         if (!(client.currentScreen instanceof HorseScreen)) return;
-
+        
         HorseScreenHandler handler = ((HorseScreen) client.currentScreen).getScreenHandler();
-
+        
         for (int i = 2; i < 17; i++) {
             if (handler.getSlot(i).getStack().isEmpty()) {
                 for (int j = 32; j < handler.slots.size(); j++) {
-                    if (!handler.getSlot(j).getStack().isEmpty() &&
-                            handler.getSlot(j).getStack().getItem() != Items.CHEST) {
+                    if (!handler.getSlot(j).getStack().isEmpty() && 
+                        handler.getSlot(j).getStack().getItem() != Items.CHEST) {
                         client.interactionManager.clickSlot(handler.syncId, j, 0, SlotActionType.PICKUP, client.player);
                         client.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, client.player);
                         break;
@@ -283,34 +231,19 @@ public class DupeSequencer {
 
     private void moveItemsFromDonkey() {
         if (!(client.currentScreen instanceof HorseScreen)) return;
-
+        
         HorseScreenHandler handler = ((HorseScreen) client.currentScreen).getScreenHandler();
-        boolean hasDroppedItems = false;
-
+        
         for (int i = 2; i < 17; i++) {
             if (!handler.getSlot(i).getStack().isEmpty()) {
-                // First try to find an empty slot in player inventory
-                boolean foundEmptySlot = false;
                 for (int j = 32; j < handler.slots.size(); j++) {
                     if (handler.getSlot(j).getStack().isEmpty()) {
                         client.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, client.player);
                         client.interactionManager.clickSlot(handler.syncId, j, 0, SlotActionType.PICKUP, client.player);
-                        foundEmptySlot = true;
                         break;
                     }
                 }
-
-                // If no empty slot was found, throw the item
-                if (!foundEmptySlot) {
-                    client.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, client.player);
-                    client.interactionManager.clickSlot(handler.syncId, -999, 0, SlotActionType.PICKUP, client.player);
-                    hasDroppedItems = true;
-                }
             }
-        }
-
-        if (hasDroppedItems) {
-            sendDebugMessage("Some items were thrown due to full inventory!");
         }
     }
 }
